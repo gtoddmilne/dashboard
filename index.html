@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+  <!-- Apple Mobile Web App & PWA Integration -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Marine Hub" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#040812" />
+
+  <!-- Dynamic Inline SVG App Icon for iOS Home Screen -->
+  <link id="apple-touch-icon-link" rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%230284c7'/%3E%3Cstop offset='100%25' stop-color='%23040812'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='180' height='180' rx='40' fill='url(%23g)'/%3E%3Ccircle cx='90' cy='90' r='54' fill='none' stroke='%2338bdf8' stroke-width='6'/%3E%3Cpolygon points='90,26 106,90 90,78 74,90' fill='%23fbbf24'/%3E%3Cpolygon points='90,154 106,90 90,102 74,90' fill='%2338bdf8'/%3E%3Ccircle cx='90' cy='90' r='8' fill='%23f8fafc'/%3E%3C/svg%3E" />
+  <link id="pwa-manifest-link" rel="manifest" />
+
+  <title>Barrington &amp; Boca Grande Marine Hub</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            marine: {
+              950: '#040812',
+              900: '#081224',
+              850: '#0c1b36',
+              800: '#12254a',
+              700: '#1b3668',
+              cyan: '#38bdf8',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              coral: '#fb7185'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js for Conimicut Light Water Levels Visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Desktop locked viewport vs Mobile native smooth touch scroll */
+    @media (min-width: 1024px) {
+      html, body {
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+    }
+    @media (max-width: 1023px) {
+      html, body {
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-marine-950 text-slate-100 flex flex-col font-sans antialiased min-h-screen lg:h-screen lg:overflow-hidden selection:bg-sky-500 selection:text-marine-950">
+
+  <!-- Sticky Glassmorphic Top Header (Respects iPhone Notch / Dynamic Island) -->
+  <header class="sticky top-0 z-40 border-b border-marine-800/90 bg-marine-900/90 backdrop-blur-xl pt-[env(safe-area-inset-top)] shrink-0">
+    <div class="h-11 px-3 md:px-4 flex items-center justify-between gap-2">
+
+      <!-- Brand & Active Location Title -->
+      <div class="flex items-center gap-2 min-w-0">
+        <div id="header-brand-icon" class="w-7 h-7 rounded-lg bg-gradient-to-tr from-sky-500 to-teal-400 p-0.5 flex items-center justify-center shadow shrink-0 transition-all">
+          <div class="w-full h-full bg-marine-950 rounded-[6px] flex items-center justify-center text-sky-400">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <h1 id="header-active-title" class="text-xs sm:text-sm font-bold tracking-tight text-white leading-none truncate">Barrington Marine Hub</h1>
+            <span id="cache-status-pill" class="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-marine-800 text-slate-300 border border-marine-700 font-mono shrink-0">
+              <span id="cache-dot" class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+              <span id="cache-status-text">Initializing</span>
+            </span>
+          </div>
+          <p id="header-active-subtitle" class="text-[10px] text-slate-400 leading-none mt-0.5 truncate">Narragansett Bay &bull; Conimicut Light &bull; KRIBARRI45</p>
+        </div>
+      </div>
+
+      <!-- Desktop Segmented Switcher (Synced with Mobile Bottom Tab Bar) -->
+      <div class="hidden lg:inline-flex p-0.5 bg-marine-950 rounded-lg border border-marine-800 text-xs shrink-0">
+        <button 
+          id="desktop-tab-barrington"
+          onclick="switchTab('barrington')"
+          class="px-3 py-1 rounded-md font-semibold bg-sky-600/20 text-sky-300 border border-sky-500/30 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span>Barrington, RI</span>
+        </button>
+        <button 
+          id="desktop-tab-bocagrande"
+          onclick="switchTab('bocagrande')"
+          class="px-3 py-1 rounded-md font-semibold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+          <span>Boca Grande, FL</span>
+        </button>
+      </div>
+
+      <!-- Right Controls: Celestial (Lunar + Location Solar), Clock, API Key Modal, Refresh -->
+      <div class="flex items-center gap-1.5 text-xs shrink-0">
+        <!-- Celestial Strip -->
+        <div id="celestial-strip" class="hidden md:flex items-center gap-2 px-2 py-1 bg-marine-950 rounded-md border border-marine-800 text-[10px]">
+          <div class="flex items-center gap-1.5 pr-2 border-r border-marine-800">
+            <div id="moon-icon-container" class="w-3.5 h-3.5 flex items-center justify-center shrink-0"></div>
+            <span id="moon-phase-name" class="font-medium text-slate-200 text-[9px]">--</span>
+            <span id="moon-illum-pct" class="text-slate-400 font-mono text-[8px]">(--%)</span>
+          </div>
+          <div class="flex items-center gap-2 text-[9px] text-slate-300">
+            <span class="flex items-center gap-0.5 text-amber-300" title="Local Sunrise">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>
+              <span id="sun-rise-val">--:--</span>
+            </span>
+            <span class="flex items-center gap-0.5 text-orange-400" title="Local Sunset">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>
+              <span id="sun-set-val">--:--</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Live ET Clock -->
+        <div class="hidden sm:flex items-center gap-1 px-2 py-1 bg-marine-950 rounded-md border border-marine-800 text-[10px] font-mono text-slate-200">
+          <svg class="w-3 h-3 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="current-clock">--:-- ET</span>
+        </div>
+
+        <!-- Settings / WU API Key Modal Trigger -->
+        <button
+          onclick="openSettingsModal()"
+          class="p-1.5 bg-marine-800/90 hover:bg-marine-700 text-slate-300 hover:text-amber-300 rounded-lg border border-marine-700 transition active:scale-95"
+          title="Configure Weather Underground API Key & Stations">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+
+        <!-- Manual Refresh Button -->
+        <button 
+          id="refresh-all-btn"
+          onclick="fetchAllData(true)"
+          class="flex items-center gap-1 px-2.5 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 hover:text-white rounded-lg border border-sky-500/30 transition text-[10px] font-semibold active:scale-95"
+          title="Refresh All Feeds">
+          <svg id="refresh-icon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          <span class="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SHELL CONTENT CONTAINER (Cleared at bottom for fixed iOS tab bar on mobile) -->
+  <main class="flex-1 min-h-0 pb-24 lg:pb-2.5 p-2 md:p-2.5 flex flex-col lg:overflow-hidden">
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: BARRINGTON MARINE & WEATHER HUB (Barrington, RI)               -->
+    <!-- ===================================================================== -->
+    <div id="view-barrington" class="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 lg:overflow-hidden">
+
+      <!-- LEFT COLUMN (7 Cols): [2x KRIBARRI45 Station : 1x 12-Hour Outlook : 1x 7-Day Forecast] -->
+      <div class="lg:col-span-7 flex flex-col gap-2 min-h-0 lg:h-full">
+
+        <!-- 1. Bourne Lane / KRIBARRI45 Weather Station (2x Flex Height) -->
+        <section style="flex: 2 1 0%;" class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2.5 flex flex-col min-h-0 shadow-lg justify-between">
+          <!-- Station Header -->
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0 gap-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="p-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+              </span>
+              <span id="ri-pws-title" class="text-xs sm:text-sm font-bold text-white tracking-tight truncate">Bourne Lane / KRIBARRI45</span>
+              <span class="hidden sm:inline text-[9px] px-1.5 py-0.5 bg-marine-800 text-slate-300 rounded border border-marine-700 font-medium shrink-0">Barrington, RI</span>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span id="ri-pws-status-pill" class="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="ri-pws-status-text">Connecting...</span>
+              </span>
+
+              <!-- Telemetry vs Web View Toggle -->
+              <div class="inline-flex p-0.5 bg-marine-950 rounded-lg border border-marine-800 text-[9px]">
+                <button 
+                  id="ri-pws-tab-metrics" 
+                  onclick="setPwsView('ri', 'metrics')"
+                  class="px-2 py-0.5 rounded-md font-semibold bg-marine-800 text-sky-400 shadow-sm transition">
+                  Telemetry
+                </button>
+                <button 
+                  id="ri-pws-tab-embed" 
+                  onclick="setPwsView('ri', 'embed')"
+                  class="px-2 py-0.5 rounded-md font-semibold text-slate-400 hover:text-slate-200 transition">
+                  Web View
+                </button>
+              </div>
+
+              <a 
+                href="https://www.pwsweather.com/station/pws/bournelane" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="text-slate-400 hover:text-sky-400 transition p-0.5"
+                title="Open Bourne Lane on PWSWeather">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- 5-Card Oversized Telemetry View -->
+          <div id="ri-pws-metrics-view" class="flex-1 min-h-0 pt-2 flex flex-col justify-center">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 h-full">
+              
+              <!-- Temperature Card -->
+              <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wider uppercase leading-none">
+                  <span>Temp</span>
+                  <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                </div>
+                <div class="my-1.5 lg:my-auto flex items-baseline gap-1">
+                  <span id="ri-pws-temp" class="text-4xl sm:text-4xl xl:text-5xl font-black text-amber-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-xs font-bold text-slate-400">°F</span>
+                </div>
+                <div class="pt-1.5 border-t border-marine-800/70 flex items-center justify-between gap-1 text-[9px] text-slate-300 leading-none">
+                  <span>Feels: <strong id="ri-pws-feels" class="text-amber-200 font-bold">--°</strong></span>
+                  <span>Dew: <strong id="ri-pws-dew" class="text-slate-100 font-bold">--°</strong></span>
+                </div>
+              </div>
+
+              <!-- Wind & Compass Card -->
+              <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wider uppercase leading-none">
+                  <span>Wind</span>
+                  <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+                </div>
+                <div class="my-1.5 lg:my-auto flex items-baseline gap-1">
+                  <span id="ri-pws-wind" class="text-4xl sm:text-4xl xl:text-5xl font-black text-sky-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-xs font-bold text-slate-400">mph</span>
+                </div>
+                <div class="pt-1.5 border-t border-marine-800/70 flex items-center justify-between gap-1 text-[9px] text-slate-300 leading-none">
+                  <span class="flex items-center gap-1">
+                    <svg id="ri-pws-arrow" class="w-3 h-3 transform transition-transform duration-500 text-sky-400 fill-sky-400/40 shrink-0" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+                    <strong id="ri-pws-cardinal" class="text-sky-300 font-bold">--</strong>
+                  </span>
+                  <span>Gust: <strong id="ri-pws-gust" class="text-slate-100 font-bold">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Barometer Card -->
+              <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wider uppercase leading-none">
+                  <span>Pressure</span>
+                  <svg class="w-3.5 h-3.5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                </div>
+                <div class="my-1.5 lg:my-auto flex items-baseline gap-1">
+                  <span id="ri-pws-baro" class="text-3xl sm:text-3xl xl:text-4xl font-black text-teal-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-[10px] font-bold text-slate-400">inHg</span>
+                </div>
+                <div class="pt-1.5 border-t border-marine-800/70 flex items-center justify-between text-[9px] text-slate-300 leading-none">
+                  <span id="ri-pws-trend" class="text-slate-400">Steady</span>
+                  <span id="ri-pws-source" class="font-bold text-emerald-400 truncate max-w-[65px]">WU Live</span>
+                </div>
+              </div>
+
+              <!-- Humidity & Solar/UV Card -->
+              <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wider uppercase leading-none">
+                  <span>Humidity</span>
+                  <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>
+                </div>
+                <div class="my-1.5 lg:my-auto flex items-baseline gap-1">
+                  <span id="ri-pws-humidity" class="text-4xl sm:text-4xl xl:text-5xl font-black text-blue-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-xs font-bold text-slate-400">%</span>
+                </div>
+                <div class="pt-1.5 border-t border-marine-800/70 flex items-center justify-between gap-1 text-[9px] text-slate-300 leading-none">
+                  <span>Sol: <strong id="ri-pws-solar" class="text-slate-100 font-bold">--</strong></span>
+                  <span>UV: <strong id="ri-pws-uv" class="text-amber-300 font-bold">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Rain Rate & Daily Rain Card -->
+              <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner col-span-2 sm:col-span-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wider uppercase leading-none">
+                  <span>Rain Rate</span>
+                  <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
+                </div>
+                <div class="my-1.5 lg:my-auto flex items-baseline gap-1">
+                  <span id="ri-pws-rain-rate" class="text-3xl sm:text-3xl xl:text-4xl font-black text-cyan-300 font-mono tracking-tight leading-none">0.00</span>
+                  <span class="text-[10px] font-bold text-slate-400">in/hr</span>
+                </div>
+                <div class="pt-1.5 border-t border-marine-800/70 flex items-center justify-between text-[9px] text-slate-300 leading-none">
+                  <span>Daily:</span>
+                  <span class="text-cyan-200 font-mono font-bold"><span id="ri-pws-daily-rain">0.00</span> in</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Embedded Web View (PWSWeather Bourne Lane) -->
+          <div id="ri-pws-embed-view" class="hidden flex-1 min-h-0 pt-2">
+            <div class="w-full h-44 lg:h-full rounded-xl overflow-hidden border border-marine-800 bg-marine-950">
+              <iframe 
+                src="https://www.pwsweather.com/station/pws/bournelane" 
+                class="w-full h-full border-0"
+                loading="lazy"
+                title="PWSWeather Bourne Lane Barrington">
+              </iframe>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Barrington 12-Hour Outlook (1x Flex Height) -->
+        <section style="flex: 1 1 0%;" class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2.5 flex flex-col min-h-0 shadow-md justify-between">
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="p-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              <span class="text-xs font-bold text-white tracking-tight">Barrington 12-Hour Outlook</span>
+            </div>
+            <span class="text-[9px] text-slate-400">NWS Hourly &middot; Next 12 Hours</span>
+          </div>
+
+          <div id="ri-hourly-container" class="flex lg:grid lg:grid-cols-12 gap-1.5 pt-1.5 flex-1 min-h-0 items-stretch overflow-x-auto no-scrollbar">
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="min-w-[64px] lg:min-w-0 bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+          </div>
+        </section>
+
+        <!-- 3. Barrington 7-Day Extended Forecast (1x Flex Height, Starts Today) -->
+        <section style="flex: 1 1 0%;" class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2.5 flex flex-col min-h-0 shadow-md justify-between">
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="p-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </span>
+              <span class="text-xs font-bold text-white tracking-tight">Barrington 7-Day Forecast</span>
+            </div>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-semibold border border-indigo-500/20">RI &middot; Starts Today</span>
+          </div>
+
+          <div id="ri-daily-container" class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 pt-1.5 flex-1 min-h-0 items-stretch">
+            <div class="bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+            <div class="bg-marine-950/70 rounded-xl border border-marine-800 animate-pulse h-24 lg:h-auto"></div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN (5 Cols): Conimicut Light Water Levels & Narragansett Bay Marine (4x Full Height) -->
+      <div class="lg:col-span-5 flex flex-col lg:h-full min-h-[380px] lg:min-h-0">
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2.5 flex flex-col h-full min-h-0 shadow-lg justify-between">
+          
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="p-1 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+              </span>
+              <span class="text-xs sm:text-sm font-bold text-white tracking-tight">Conimicut Light Water Levels</span>
+              <span class="text-[9px] px-1.5 py-0.5 bg-marine-800 text-sky-300 rounded border border-marine-700 font-medium">NOAA #8452944</span>
+            </div>
+
+            <span class="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> NOAA Live
+            </span>
+          </div>
+
+          <!-- Key Tide Metrics Banner -->
+          <div class="grid grid-cols-3 gap-1.5 my-2 shrink-0">
+            <div class="bg-marine-950/90 p-2 rounded-xl border border-marine-800">
+              <div class="text-[8px] text-slate-400 uppercase font-bold">Latest Level</div>
+              <div class="flex items-baseline gap-1 mt-0.5">
+                <span id="ri-tide-latest-val" class="text-lg sm:text-xl font-black text-sky-300 font-mono">--</span>
+                <span class="text-[8px] text-slate-400 font-semibold">ft MLLW</span>
+              </div>
+            </div>
+            <div class="bg-marine-950/90 p-2 rounded-xl border border-marine-800">
+              <div class="text-[8px] text-slate-400 uppercase font-bold">Tidal Stage</div>
+              <div id="ri-tide-state-val" class="text-[10px] sm:text-xs font-bold text-emerald-400 leading-tight mt-1">
+                <span>Calculating...</span>
+              </div>
+            </div>
+            <div class="bg-marine-950/90 p-2 rounded-xl border border-marine-800">
+              <div class="text-[8px] text-slate-400 uppercase font-bold">Next Crest</div>
+              <div id="ri-tide-next-event" class="text-[10px] sm:text-xs font-bold text-amber-300 leading-tight truncate mt-1">--</div>
+            </div>
+          </div>
+
+          <!-- Narragansett Bay & Conimicut Point Sea State -->
+          <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800 mb-2 shrink-0 shadow-inner">
+            <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 text-[9px]">
+              <div class="flex items-center gap-1.5 font-bold text-slate-200">
+                <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                <span>Narragansett Bay Sea State (Conimicut Point / ANZ236)</span>
+              </div>
+              <span id="ri-bay-advisory-badge" class="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Normal Seas
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-2 items-center">
+              <!-- Sig Wave Height -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Sig Wave Ht</div>
+                  <div class="flex items-baseline gap-0.5 mt-0.5">
+                    <span id="ri-bay-wave-height" class="text-sm font-black text-cyan-300 font-mono">1 - 2</span>
+                    <span class="text-[9px] text-slate-400 font-semibold">ft</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bay Chop -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Bay Chop</div>
+                  <div id="ri-bay-wave-status" class="text-[10px] font-black text-teal-300 mt-0.5 truncate">
+                    Light Chop
+                  </div>
+                </div>
+              </div>
+
+              <!-- Water Temp -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Water Temp</div>
+                  <div class="flex items-baseline gap-0.5 mt-0.5">
+                    <span id="ri-bay-water-temp" class="text-sm font-black text-blue-300 font-mono">--</span>
+                    <span class="text-[9px] text-slate-400 font-semibold">°F</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 36-Hour Water Level Graph (-24h to +12h) -->
+          <div class="bg-marine-950/80 p-2.5 rounded-xl border border-marine-800 flex-1 min-h-[210px] lg:min-h-0 relative flex flex-col justify-between">
+            <div class="flex items-center justify-between text-[9px] text-slate-400 mb-1.5 shrink-0">
+              <span class="flex items-center gap-1">
+                <span class="inline-block w-2.5 h-0.5 bg-emerald-400 rounded"></span>
+                <strong class="text-slate-300">Observed (-24h)</strong>
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="inline-block w-2.5 h-0.5 bg-sky-400 rounded"></span>
+                <strong class="text-slate-300">Predicted (-24h to +12h)</strong>
+              </span>
+              <span class="text-slate-500 font-mono text-[8px]">MLLW (ft)</span>
+            </div>
+
+            <div class="relative flex-1 min-h-0 w-full">
+              <canvas id="tideChart"></canvas>
+              <div id="chart-loader" class="absolute inset-0 bg-marine-950/60 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-300 pointer-events-none opacity-0">
+                <svg class="w-5 h-5 text-sky-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: BOCA GRANDE MARINE & WEATHER HUB (4049 Shore Ln, Boca Grande)  -->
+    <!-- ===================================================================== -->
+    <div id="view-bocagrande" class="hidden flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 lg:overflow-hidden">
+
+      <!-- LEFT COLUMN (7 Cols): KFLBOCAG26 Station, 12-Hour Outlook, 7-Day Forecast (Tomorrow), Doppler Radar -->
+      <div class="lg:col-span-7 flex flex-col gap-2 min-h-0 lg:h-full lg:overflow-hidden">
+
+        <!-- 1. Boca Grande PWS KFLBOCAG26 -->
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl px-2.5 py-2 flex flex-col shrink-0 shadow-md">
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0 gap-1.5">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="p-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+              </span>
+              <span class="text-xs sm:text-sm font-bold text-white tracking-tight truncate">Boca Grande Station</span>
+              <span id="bg-station-badge" class="text-[9px] px-1.5 py-0.5 bg-marine-800 text-slate-300 rounded border border-marine-700 font-medium shrink-0">KFLBOCAG26</span>
+              <span id="bg-pws-status-pill" class="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono truncate">
+                <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                <span id="bg-pws-status-text">Connecting...</span>
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <div class="inline-flex p-0.5 bg-marine-950 rounded-lg border border-marine-800 text-[9px]">
+                <button 
+                  id="bg-pws-tab-metrics" 
+                  onclick="setPwsView('bg', 'metrics')"
+                  class="px-2 py-0.5 rounded-md font-semibold bg-marine-800 text-sky-400 shadow-sm transition">
+                  Telemetry
+                </button>
+                <button 
+                  id="bg-pws-tab-embed" 
+                  onclick="setPwsView('bg', 'embed')"
+                  class="px-2 py-0.5 rounded-md font-semibold text-slate-400 hover:text-slate-200 transition">
+                  Web View
+                </button>
+              </div>
+              <a 
+                id="bg-wu-external-link"
+                href="https://www.wunderground.com/dashboard/pws/KFLBOCAG26" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="text-slate-400 hover:text-sky-400 transition p-0.5"
+                title="Open Weather Underground Station in New Tab">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- 5-Card Boca Grande Telemetry Display -->
+          <div id="bg-pws-metrics-view" class="pt-1.5 flex flex-col justify-center">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              
+              <!-- Temp -->
+              <div class="bg-marine-950/85 px-2 py-1.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wide uppercase leading-none">
+                  <span>Temp</span>
+                  <svg class="w-3 h-3 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                </div>
+                <div class="my-1.5 flex items-baseline gap-1">
+                  <span id="bg-pws-temp" class="text-2xl sm:text-3xl lg:text-4xl font-black text-amber-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-xs font-bold text-slate-400">°F</span>
+                </div>
+                <div class="pt-1 border-t border-marine-800/60 flex items-center justify-between text-[10px] text-slate-300 leading-none">
+                  <span>Feels: <strong id="bg-pws-feels" class="text-amber-200 font-semibold">--°</strong></span>
+                  <span>Dew: <strong id="bg-pws-dew" class="text-slate-200 font-semibold">--°</strong></span>
+                </div>
+              </div>
+
+              <!-- Wind -->
+              <div class="bg-marine-950/85 px-2 py-1.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wide uppercase leading-none">
+                  <span>Wind</span>
+                  <svg class="w-3 h-3 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+                </div>
+                <div class="my-1.5 flex items-baseline gap-1">
+                  <span id="bg-pws-wind" class="text-2xl sm:text-3xl lg:text-4xl font-black text-sky-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-[10px] font-bold text-slate-400">mph</span>
+                </div>
+                <div class="pt-1 border-t border-marine-800/60 flex items-center justify-between text-[10px] text-slate-300 leading-none">
+                  <span class="flex items-center gap-1">
+                    <svg id="bg-pws-arrow" class="w-2.5 h-2.5 transform transition-transform duration-500 text-sky-400 fill-sky-400/40 shrink-0" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+                    <strong id="bg-pws-cardinal" class="text-sky-300 font-bold">--</strong>
+                  </span>
+                  <span>Gust: <strong id="bg-pws-gust" class="text-slate-100 font-semibold">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Barometer -->
+              <div class="bg-marine-950/85 px-2 py-1.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wide uppercase leading-none">
+                  <span>Baro</span>
+                  <svg class="w-3 h-3 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                </div>
+                <div class="my-1.5 flex items-baseline gap-1">
+                  <span id="bg-pws-baro" class="text-xl sm:text-2xl lg:text-3xl font-black text-teal-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-[9px] font-bold text-slate-400">inHg</span>
+                </div>
+                <div class="pt-1 border-t border-marine-800/60 flex items-center justify-between text-[10px] text-slate-300 leading-none">
+                  <span>Trend:</span>
+                  <span id="bg-pws-trend" class="font-bold text-emerald-400">--</span>
+                </div>
+              </div>
+
+              <!-- Humidity & Solar/UV -->
+              <div class="bg-marine-950/85 px-2 py-1.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wide uppercase leading-none">
+                  <span>Humidity</span>
+                  <svg class="w-3 h-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>
+                </div>
+                <div class="my-1.5 flex items-baseline gap-1">
+                  <span id="bg-pws-humidity" class="text-2xl sm:text-3xl lg:text-4xl font-black text-blue-300 font-mono tracking-tight leading-none">--</span>
+                  <span class="text-xs font-bold text-slate-400">%</span>
+                </div>
+                <div class="pt-1 border-t border-marine-800/60 flex items-center justify-between text-[10px] text-slate-300 leading-none">
+                  <span>Sol: <strong id="bg-pws-solar" class="text-slate-100 font-semibold">--</strong></span>
+                  <span>UV: <strong id="bg-pws-uv" class="text-amber-300 font-bold">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Precip Rate & Daily Total -->
+              <div class="bg-marine-950/85 px-2 py-1.5 rounded-xl border border-marine-800/90 flex flex-col justify-between shadow-inner col-span-2 sm:col-span-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold tracking-wide uppercase leading-none">
+                  <span>Precip</span>
+                  <svg class="w-3 h-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
+                </div>
+                <div class="my-1.5 flex items-baseline gap-1">
+                  <span id="bg-pws-rain-rate" class="text-xl sm:text-2xl lg:text-3xl font-black text-cyan-300 font-mono tracking-tight leading-none">0.00</span>
+                  <span class="text-[9px] font-bold text-slate-400">in/h</span>
+                </div>
+                <div class="pt-1 border-t border-marine-800/60 flex items-center justify-between text-[10px] text-slate-300 leading-none">
+                  <span>Day:</span>
+                  <span class="text-cyan-200 font-mono font-bold"><span id="bg-pws-daily-rain">0.00</span> in</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Embedded Web View (Weather Underground KFLBOCAG26) -->
+          <div id="bg-pws-embed-view" class="hidden min-h-0 pt-1.5">
+            <div class="w-full h-44 rounded-xl overflow-hidden border border-marine-800 bg-marine-950">
+              <iframe 
+                src="https://www.wunderground.com/dashboard/pws/KFLBOCAG26" 
+                class="w-full h-full border-0"
+                loading="lazy"
+                title="Weather Underground PWS KFLBOCAG26 Boca Grande">
+              </iframe>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Boca Grande 12-Hour Outlook -->
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl px-2.5 py-1.5 flex flex-col shrink-0 shadow-sm">
+          <div class="flex items-center justify-between pb-1 border-b border-marine-800/70 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="p-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              <span class="text-[11px] font-bold text-white tracking-tight">Boca Grande 12-Hour Outlook</span>
+            </div>
+            <span class="text-[9px] text-slate-400">NWS Hourly &middot; 4049 Shore Ln</span>
+          </div>
+
+          <div id="bg-hourly-container" class="flex lg:grid lg:grid-cols-12 gap-1 py-1 items-center overflow-x-auto no-scrollbar">
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="min-w-[60px] lg:min-w-0 bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+          </div>
+        </section>
+
+        <!-- 3. Boca Grande 7-Day Forecast (Starting Tomorrow) -->
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl px-2.5 py-1.5 flex flex-col shrink-0 shadow-sm">
+          <div class="flex items-center justify-between pb-1 border-b border-marine-800/70 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="p-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </span>
+              <span class="text-[11px] font-bold text-white tracking-tight">Boca Grande 7-Day Forecast</span>
+            </div>
+            <span class="text-[9px] text-indigo-300 font-semibold">Starting Tomorrow</span>
+          </div>
+
+          <div id="bg-daily-container" class="grid grid-cols-4 sm:grid-cols-7 gap-1 py-1 items-center">
+            <div class="bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+            <div class="bg-marine-950/70 rounded-lg border border-marine-800/80 animate-pulse h-12"></div>
+          </div>
+        </section>
+
+        <!-- 4. Interactive Live Doppler Radar (~50 Mi Radius centered on 4049 Shore Ln) -->
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2 flex flex-col flex-1 min-h-[240px] shadow-lg overflow-hidden">
+          <div class="flex items-center justify-between pb-1 border-b border-marine-800/80 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="p-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></svg>
+              </span>
+              <span class="text-xs sm:text-sm font-bold text-white tracking-tight">Live Doppler Radar</span>
+              <span class="text-[9px] px-1.5 py-0.5 bg-marine-800 text-rose-300 rounded border border-marine-700 font-medium">~50 Mi Radius &middot; 4049 Shore Ln</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] text-slate-400 hidden sm:inline">Charlotte Harbor &middot; Pine Island Sound &middot; Gulf</span>
+              <a 
+                href="https://www.windy.com/?radar,26.7562,-82.2618,9" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="text-slate-400 hover:text-sky-400 transition"
+                title="Open Fullscreen Radar in New Tab">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="relative flex-1 min-h-[190px] w-full pt-1.5">
+            <div class="w-full h-full rounded-xl overflow-hidden border border-marine-800/90 bg-marine-950 shadow-inner">
+              <iframe 
+                src="https://embed.windy.com/embed2.html?lat=26.7562&lon=-82.2618&detailLat=26.7562&detailLon=-82.2618&width=650&height=350&zoom=9&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1" 
+                class="w-full h-full border-0"
+                loading="lazy"
+                title="Live Weather Radar 4049 Shore Lane Boca Grande">
+              </iframe>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN (5 Cols): Pine Island Sound / Pineland Tide Schedule (NOAA #8725528 & GMZ836) -->
+      <div class="lg:col-span-5 flex flex-col justify-start">
+        <section class="bg-marine-900/95 border border-marine-800 rounded-2xl p-2.5 flex flex-col shadow-lg gap-2">
+          
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="p-1 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+              </span>
+              <span class="text-xs sm:text-sm font-bold text-white tracking-tight">Pine Island Tides</span>
+              <span class="text-[9px] px-1.5 py-0.5 bg-marine-800 text-sky-300 rounded border border-marine-700 font-medium">NOAA #8725528</span>
+            </div>
+
+            <span class="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> NOAA Live
+            </span>
+          </div>
+
+          <!-- Key Tide Metrics Banner -->
+          <div class="grid grid-cols-2 gap-1.5 shrink-0">
+            <div class="bg-marine-950/90 p-2 rounded-xl border border-marine-800 flex flex-col justify-between">
+              <div class="text-[8px] text-slate-400 uppercase font-bold">Tidal Stage</div>
+              <div id="bg-tide-state-val" class="text-xs font-bold text-emerald-400 leading-tight mt-0.5">
+                <span>Calculating...</span>
+              </div>
+            </div>
+            <div class="bg-marine-950/90 p-2 rounded-xl border border-marine-800 flex flex-col justify-between">
+              <div class="text-[8px] text-slate-400 uppercase font-bold">Next High / Low</div>
+              <div id="bg-tide-next-event" class="text-xs font-bold text-amber-300 leading-tight truncate mt-0.5">--</div>
+            </div>
+          </div>
+
+          <!-- Pine Island Sound & Boca Grande Pass (GMZ836) Wave Conditions Ribbon -->
+          <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 shrink-0 shadow-inner">
+            <div class="flex items-center justify-between pb-1 border-b border-marine-800/70 text-[9px]">
+              <div class="flex items-center gap-1.5 font-bold text-slate-200">
+                <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                <span>Pine Island Sound &amp; Boca Grande Pass (GMZ836)</span>
+              </div>
+              <span id="bg-bay-advisory-badge" class="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Normal Seas
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-2 items-center">
+              <!-- Sig Wave Height -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Sig Wave Ht</div>
+                  <div class="flex items-baseline gap-0.5 mt-0.5">
+                    <span id="bg-bay-wave-height" class="text-xs sm:text-sm font-black text-cyan-300 font-mono">1 - 2</span>
+                    <span class="text-[8px] text-slate-400 font-semibold">ft</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pass Chop -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Pass Chop</div>
+                  <div id="bg-bay-wave-status" class="text-[10px] font-black text-teal-300 mt-0.5 truncate">
+                    Light Chop
+                  </div>
+                </div>
+              </div>
+
+              <!-- Water Temp -->
+              <div class="flex items-center gap-1.5">
+                <div class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold leading-none">Water Temp</div>
+                  <div class="flex items-baseline gap-0.5 mt-0.5">
+                    <span id="bg-bay-water-temp" class="text-xs sm:text-sm font-black text-blue-300 font-mono">--</span>
+                    <span class="text-[8px] text-slate-400 font-semibold">°F</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Today's Tide Predictions Table (NOAA High / Low) -->
+          <div class="bg-marine-950/90 p-2.5 rounded-xl border border-marine-800/90 flex flex-col justify-start">
+            <div class="flex items-center justify-between pb-1.5 border-b border-marine-800/80 mb-2 shrink-0">
+              <div class="flex items-center gap-1.5 text-slate-200">
+                <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span class="text-[11px] font-bold">Today's Tide Forecast (Pine Island)</span>
+              </div>
+              <span id="bg-tide-table-date" class="text-[9px] font-mono text-slate-400">--</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-marine-800/60 pb-1">
+                    <th class="py-1.5 px-2">Type</th>
+                    <th class="py-1.5 px-2">Time</th>
+                    <th class="py-1.5 px-2 text-right">Height (MLLW)</th>
+                    <th class="py-1.5 px-2 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="bg-tide-table-body" class="divide-y divide-marine-800/40 font-mono">
+                  <tr>
+                    <td colspan="4" class="py-4 text-center text-slate-500 font-sans text-[10px]">
+                      Loading today's tide predictions...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pt-2 border-t border-marine-800/60 text-[8px] text-slate-500 flex items-center justify-between shrink-0 font-sans mt-2">
+              <span>Datum: Mean Lower Low Water (MLLW)</span>
+              <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=8725528" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:underline">
+                NOAA Station Home &rarr;
+              </a>
+            </div>
+          </div>
+
+        </section>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FIXED iOS-STYLE TRANSLUCENT BOTTOM TAB BAR -->
+  <nav aria-label="Primary Dashboard Navigation" class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-marine-900/90 backdrop-blur-xl border-t border-marine-800/90 pb-[env(safe-area-inset-bottom)] shadow-2xl">
+    <div class="grid grid-cols-2 h-14 max-w-lg mx-auto px-2">
+      
+      <!-- Tab 1: Barrington -->
+      <button 
+        id="mobile-tab-barrington"
+        onclick="switchTab('barrington')"
+        class="flex flex-col items-center justify-center gap-0.5 text-sky-400 transition active:scale-95">
+        <div id="mobile-pill-barrington" class="px-4 py-1 rounded-full bg-sky-500/15 border border-sky-500/30 transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </div>
+        <span class="text-[10px] font-bold tracking-tight">Barrington</span>
+      </button>
+
+      <!-- Tab 2: Boca Grande -->
+      <button 
+        id="mobile-tab-bocagrande"
+        onclick="switchTab('bocagrande')"
+        class="flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-200 transition active:scale-95">
+        <div id="mobile-pill-bocagrande" class="px-4 py-1 rounded-full bg-transparent border border-transparent transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+        </div>
+        <span class="text-[10px] font-bold tracking-tight">Boca Grande</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- Settings Modal for Weather Underground API Key & Station IDs -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden bg-marine-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-marine-900 border border-marine-700 rounded-2xl max-w-md w-full p-4 shadow-2xl space-y-3">
+      <div class="flex items-center justify-between border-b border-marine-800 pb-2.5">
+        <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>PWS &amp; Cache Configuration</span>
+        </h2>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg bg-marine-800">Close</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Barrington Station ID</label>
+            <input id="input-ri-station" type="text" value="KRIBARRI45" placeholder="KRIBARRI45" class="w-full px-2.5 py-1.5 bg-marine-950 border border-marine-700 rounded-xl text-white font-mono focus:outline-none focus:border-sky-500" />
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Boca Grande Station ID</label>
+            <input id="input-bg-station" type="text" value="KFLBOCAG26" placeholder="KFLBOCAG26" class="w-full px-2.5 py-1.5 bg-marine-950 border border-marine-700 rounded-xl text-white font-mono focus:outline-none focus:border-sky-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Personal WU API Key <span class="text-slate-500 font-normal">(Optional)</span></label>
+          <input id="input-wu-apikey" type="text" placeholder="Enter 32-character Weather.com / WU API Key" class="w-full px-2.5 py-1.5 bg-marine-950 border border-marine-700 rounded-xl text-white font-mono focus:outline-none focus:border-sky-500" />
+        </div>
+        <div class="p-2.5 rounded-xl bg-marine-950 border border-marine-800 flex items-center justify-between">
+          <div>
+            <div class="font-semibold text-slate-200">Offline Stale-While-Revalidate Cache</div>
+            <div id="modal-cache-age" class="text-[10px] text-slate-400">Checking storage...</div>
+          </div>
+          <button onclick="clearLocalCache()" class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-[10px] font-semibold">
+            Clear Cache
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-marine-800">
+        <button onclick="resetSettings()" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Reset</button>
+        <button onclick="saveSettings()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl transition">Save &amp; Sync</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 0. DYNAMIC PWA MANIFEST REGISTRATION
+    // =========================================================================
+    (function registerInlineManifest() {
+      try {
+        const iconSvg = document.getElementById('apple-touch-icon-link').href;
+        const manifest = {
+          name: "Barrington & Boca Grande Marine Hub",
+          short_name: "Marine Hub",
+          description: "Dual Marine & Weather PWA for Barrington, RI and Boca Grande, FL",
+          start_url: ".",
+          display: "standalone",
+          background_color: "#040812",
+          theme_color: "#040812",
+          orientation: "any",
+          icons: [
+            { src: iconSvg, sizes: "192x192", type: "image/svg+xml" },
+            { src: iconSvg, sizes: "512x512", type: "image/svg+xml" }
+          ]
+        };
+        const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+        document.getElementById('pwa-manifest-link').setAttribute('href', URL.createObjectURL(blob));
+      } catch (e) {
+        console.warn('Manifest blob skipped:', e);
+      }
+    })();
+
+    // =========================================================================
+    // 1. LOCALSTORAGE STALE-WHILE-REVALIDATE CACHE ENGINE (marine_pwa_hub_cache_v2)
+    // =========================================================================
+    const CACHE_STORAGE_KEY = 'marine_pwa_hub_cache_v2';
+    const WAKE_STALE_THRESHOLD_MS = 2 * 60 * 1000; // Auto-refresh on wake if > 2 minutes old
+    const PERIODIC_REFRESH_MS = 5 * 60 * 1000;     // Auto-refresh every 5 minutes while visible
+
+    const DashboardCache = {
+      load() {
+        try {
+          const raw = localStorage.getItem(CACHE_STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (err) {
+          console.warn('Cache read failed:', err);
+          return null;
+        }
+      },
+      saveSection(sectionKey, payload) {
+        try {
+          const current = this.load() || { updatedAt: Date.now(), sections: {} };
+          current.updatedAt = Date.now();
+          current.sections[sectionKey] = {
+            timestamp: Date.now(),
+            data: payload
+          };
+          localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(current));
+          updateCacheStatusUI('live');
+        } catch (err) {
+          console.warn('Cache write failed:', err);
+        }
+      },
+      getAgeMs() {
+        const current = this.load();
+        if (!current || !current.updatedAt) return Infinity;
+        return Date.now() - current.updatedAt;
+      },
+      clear() {
+        localStorage.removeItem(CACHE_STORAGE_KEY);
+      }
+    };
+
+    function formatRelativeAge(ms) {
+      if (!isFinite(ms)) return 'No cache';
+      const sec = Math.floor(ms / 1000);
+      if (sec < 60) return 'Just now';
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `${min}m ago`;
+      const hr = Math.floor(min / 60);
+      return `${hr}h ${min % 60}m ago`;
+    }
+
+    function updateCacheStatusUI(state) {
+      const pill = document.getElementById('cache-status-pill');
+      const dot = document.getElementById('cache-dot');
+      const text = document.getElementById('cache-status-text');
+      if (!pill || !dot || !text) return;
+
+      const ageStr = formatRelativeAge(DashboardCache.getAgeMs());
+
+      if (state === 'syncing') {
+        pill.className = "inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 font-mono shrink-0";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping";
+        text.textContent = "Syncing...";
+      } else if (state === 'cached') {
+        pill.className = "inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono shrink-0";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400";
+        text.textContent = `Cached • ${ageStr}`;
+      } else {
+        pill.className = "inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 font-mono shrink-0";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400";
+        text.textContent = `Live • ${ageStr}`;
+      }
+    }
+
+    setInterval(() => {
+      const age = DashboardCache.getAgeMs();
+      if (isFinite(age)) {
+        updateCacheStatusUI(navigator.onLine ? 'live' : 'cached');
+      }
+    }, 30000);
+
+    // =========================================================================
+    // 2. TAB SWITCHER (Preserves DOM State & Resizes Chart.js)
+    // =========================================================================
+    let activeTab = localStorage.getItem('marine_pwa_active_tab') || 'barrington';
+    let solarCache = { barrington: null, bocagrande: null };
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+      localStorage.setItem('marine_pwa_active_tab', tabName);
+
+      const viewRI = document.getElementById('view-barrington');
+      const viewBG = document.getElementById('view-bocagrande');
+      const headerTitle = document.getElementById('header-active-title');
+      const headerSub = document.getElementById('header-active-subtitle');
+
+      const mobRI = document.getElementById('mobile-tab-barrington');
+      const mobBG = document.getElementById('mobile-tab-bocagrande');
+      const pillRI = document.getElementById('mobile-pill-barrington');
+      const pillBG = document.getElementById('mobile-pill-bocagrande');
+
+      const deskRI = document.getElementById('desktop-tab-barrington');
+      const deskBG = document.getElementById('desktop-tab-bocagrande');
+
+      if (tabName === 'bocagrande') {
+        viewRI.classList.add('hidden');
+        viewBG.classList.remove('hidden');
+
+        headerTitle.textContent = "Boca Grande Marine & Weather Hub";
+        headerSub.textContent = "Gasparilla Island • Pine Island Sound • 4049 Shore Ln";
+
+        mobBG.className = "flex flex-col items-center justify-center gap-0.5 text-teal-400 transition active:scale-95";
+        pillBG.className = "px-4 py-1 rounded-full bg-teal-500/15 border border-teal-500/30 transition";
+        mobRI.className = "flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-200 transition active:scale-95";
+        pillRI.className = "px-4 py-1 rounded-full bg-transparent border border-transparent transition";
+
+        deskBG.className = "px-3 py-1 rounded-md font-semibold bg-teal-600/20 text-teal-300 border border-teal-500/30 transition flex items-center gap-1.5";
+        deskRI.className = "px-3 py-1 rounded-md font-semibold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-1.5";
+      } else {
+        viewBG.classList.add('hidden');
+        viewRI.classList.remove('hidden');
+
+        headerTitle.textContent = "Barrington Marine Hub";
+        headerSub.textContent = "Narragansett Bay • Conimicut Light • KRIBARRI45";
+
+        mobRI.className = "flex flex-col items-center justify-center gap-0.5 text-sky-400 transition active:scale-95";
+        pillRI.className = "px-4 py-1 rounded-full bg-sky-500/15 border border-sky-500/30 transition";
+        mobBG.className = "flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-200 transition active:scale-95";
+        pillBG.className = "px-4 py-1 rounded-full bg-transparent border border-transparent transition";
+
+        deskRI.className = "px-3 py-1 rounded-md font-semibold bg-sky-600/20 text-sky-300 border border-sky-500/30 transition flex items-center gap-1.5";
+        deskBG.className = "px-3 py-1 rounded-md font-semibold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-1.5";
+
+        if (tideChartInstance) {
+          requestAnimationFrame(() => tideChartInstance.resize());
+        }
+      }
+
+      // Sync header sunrise/sunset to active location
+      applyLocationSolarTimes(tabName);
+
+      if (window.innerWidth < 1024) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    // =========================================================================
+    // 3. SETTINGS & STATION CONFIGURATION
+    // =========================================================================
+    let tideChartInstance = null;
+    let lastRiBaro = null;
+    let lastBgBaro = null;
+    let isFetchingNow = false;
+
+    const DEFAULT_WU_KEYS = [
+      '6532d6454b8aa370768e63d6ba5a832e',
+      'e1f10a1e78da46f5b10a1e78da96f525'
+    ];
+
+    function getStationConfig() {
+      const riStation = localStorage.getItem('marine_pwa_ri_station') || 'KRIBARRI45';
+      const bgStation = localStorage.getItem('marine_pwa_bg_station') || 'KFLBOCAG26';
+      const customKey = localStorage.getItem('wu_pws_api_key') || '';
+      return {
+        riStation: riStation.trim().toUpperCase() || 'KRIBARRI45',
+        bgStation: bgStation.trim().toUpperCase() || 'KFLBOCAG26',
+        customApiKey: customKey.trim()
+      };
+    }
+
+    function openSettingsModal() {
+      const cfg = getStationConfig();
+      document.getElementById('input-ri-station').value = cfg.riStation;
+      document.getElementById('input-bg-station').value = cfg.bgStation;
+      document.getElementById('input-wu-apikey').value = cfg.customApiKey;
+      document.getElementById('modal-cache-age').textContent = `Last synced: ${formatRelativeAge(DashboardCache.getAgeMs())}`;
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function saveSettings() {
+      const riSt = document.getElementById('input-ri-station').value.trim().toUpperCase() || 'KRIBARRI45';
+      const bgSt = document.getElementById('input-bg-station').value.trim().toUpperCase() || 'KFLBOCAG26';
+      const key = document.getElementById('input-wu-apikey').value.trim();
+
+      localStorage.setItem('marine_pwa_ri_station', riSt);
+      localStorage.setItem('marine_pwa_bg_station', bgSt);
+      if (key) {
+        localStorage.setItem('wu_pws_api_key', key);
+      } else {
+        localStorage.removeItem('wu_pws_api_key');
+      }
+      closeSettingsModal();
+      fetchAllData(true);
+    }
+
+    function resetSettings() {
+      localStorage.removeItem('marine_pwa_ri_station');
+      localStorage.removeItem('marine_pwa_bg_station');
+      localStorage.removeItem('wu_pws_api_key');
+      document.getElementById('input-ri-station').value = 'KRIBARRI45';
+      document.getElementById('input-bg-station').value = 'KFLBOCAG26';
+      document.getElementById('input-wu-apikey').value = '';
+      closeSettingsModal();
+      fetchAllData(true);
+    }
+
+    function clearLocalCache() {
+      DashboardCache.clear();
+      document.getElementById('modal-cache-age').textContent = 'Cache cleared';
+      updateCacheStatusUI('syncing');
+      fetchAllData(true);
+    }
+
+    function setPwsView(prefix, mode) {
+      const metricsView = document.getElementById(`${prefix}-pws-metrics-view`);
+      const embedView = document.getElementById(`${prefix}-pws-embed-view`);
+      const tabMetrics = document.getElementById(`${prefix}-pws-tab-metrics`);
+      const tabEmbed = document.getElementById(`${prefix}-pws-tab-embed`);
+
+      if (mode === 'embed') {
+        metricsView.classList.add('hidden');
+        embedView.classList.remove('hidden');
+        tabEmbed.className = "px-2 py-0.5 rounded-md font-semibold bg-marine-800 text-sky-400 shadow-sm transition";
+        tabMetrics.className = "px-2 py-0.5 rounded-md font-semibold text-slate-400 hover:text-slate-200 transition";
+      } else {
+        embedView.classList.add('hidden');
+        metricsView.classList.remove('hidden');
+        tabMetrics.className = "px-2 py-0.5 rounded-md font-semibold bg-marine-800 text-sky-400 shadow-sm transition";
+        tabEmbed.className = "px-2 py-0.5 rounded-md font-semibold text-slate-400 hover:text-slate-200 transition";
+      }
+    }
+
+    // =========================================================================
+    // 4. INLINE WEATHER SVGS, LUNAR PHASE, SOLAR EPHEMERIS & CLOCK HELPERS
+    // =========================================================================
+    function getWeatherSvg(type, sizeClass = "w-7 h-7") {
+      switch (type) {
+        case 'cloud-lightning':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12-3 5h4l-3 5"/></svg>`;
+        case 'snowflake':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg>`;
+        case 'cloud-rain':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>`;
+        case 'cloud-drizzle':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M8 19v1"/><path d="M8 14v1"/><path d="M16 19v1"/><path d="M16 14v1"/><path d="M12 21v1"/><path d="M12 16v1"/></svg>`;
+        case 'wind':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>`;
+        case 'cloud-fog':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 17H7"/><path d="M17 21H9"/></svg>`;
+        case 'cloud-sun':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></svg>`;
+        case 'cloud-moon':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 16a3 3 0 1 1 0 6H7a5 5 0 1 1 4.9-6Z"/><path d="M10.1 9A6 6 0 0 1 16 4a4.24 4.24 0 0 0 6 6 6 6 0 0 1-3 5.197"/></svg>`;
+        case 'cloud':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`;
+        case 'moon':
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+        case 'sun':
+        default:
+          return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+      }
+    }
+
+    function getWeatherVisuals(forecastText, isDaytime = true) {
+      const text = (forecastText || '').toLowerCase();
+      if (text.includes('thunder') || text.includes('t-storm')) return { icon: 'cloud-lightning', color: 'text-amber-400' };
+      if (text.includes('snow') || text.includes('flurr') || text.includes('sleet') || text.includes('ice')) return { icon: 'snowflake', color: 'text-cyan-300' };
+      if (text.includes('heavy rain') || text.includes('downpour')) return { icon: 'cloud-rain', color: 'text-blue-400' };
+      if (text.includes('rain') || text.includes('shower') || text.includes('drizzle')) return { icon: 'cloud-drizzle', color: 'text-sky-400' };
+      if (text.includes('wind') || text.includes('breez') || text.includes('gale')) return { icon: 'wind', color: 'text-teal-400' };
+      if (text.includes('fog') || text.includes('haze') || text.includes('mist')) return { icon: 'cloud-fog', color: 'text-slate-300' };
+      if (text.includes('partly cloudy') || text.includes('partly sunny') || text.includes('mostly sunny') || text.includes('scattered clouds')) {
+        return isDaytime ? { icon: 'cloud-sun', color: 'text-amber-300' } : { icon: 'cloud-moon', color: 'text-indigo-300' };
+      }
+      if (text.includes('cloud') || text.includes('overcast')) return { icon: 'cloud', color: 'text-slate-400' };
+      return isDaytime ? { icon: 'sun', color: 'text-amber-400' } : { icon: 'moon', color: 'text-indigo-300' };
+    }
+
+    function updateMoonPhase() {
+      const now = new Date();
+      const baseEpoch = new Date('2000-01-06T18:14:00Z').getTime();
+      const synodicMonth = 29.53058867 * 24 * 60 * 60 * 1000;
+      const phaseFraction = (((now.getTime() - baseEpoch) % synodicMonth) + synodicMonth) % synodicMonth / synodicMonth;
+      const illum = Math.round((1 - Math.cos(phaseFraction * 2 * Math.PI)) / 2 * 100);
+
+      let phaseName = '';
+      let svgContent = '';
+
+      if (phaseFraction < 0.03 || phaseFraction > 0.97) {
+        phaseName = 'New Moon';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#0f172a" stroke="#334155" stroke-width="1.2"/>`;
+      } else if (phaseFraction < 0.22) {
+        phaseName = 'Waxing Crescent';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#0f172a" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 1 8 15 A 5 7 0 0 0 8 1" fill="#f8fafc"/>`;
+      } else if (phaseFraction < 0.28) {
+        phaseName = 'First Quarter';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#0f172a" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 1 8 15 Z" fill="#f8fafc"/>`;
+      } else if (phaseFraction < 0.47) {
+        phaseName = 'Waxing Gibbous';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#f8fafc" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 0 8 15 A 4 7 0 0 1 8 1" fill="#0f172a"/>`;
+      } else if (phaseFraction < 0.53) {
+        phaseName = 'Full Moon';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#fef08a" stroke="#fde047" stroke-width="1.2"/>`;
+      } else if (phaseFraction < 0.72) {
+        phaseName = 'Waning Gibbous';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#f8fafc" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 1 8 15 A 4 7 0 0 0 8 1" fill="#0f172a"/>`;
+      } else if (phaseFraction < 0.78) {
+        phaseName = 'Last Quarter';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#0f172a" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 0 8 15 Z" fill="#f8fafc"/>`;
+      } else {
+        phaseName = 'Waning Crescent';
+        svgContent = `<circle cx="8" cy="8" r="7" fill="#0f172a" stroke="#334155" stroke-width="1.2"/><path d="M 8 1 A 7 7 0 0 0 8 15 A 5 7 0 0 1 8 1" fill="#f8fafc"/>`;
+      }
+
+      const container = document.getElementById('moon-icon-container');
+      const nameEl = document.getElementById('moon-phase-name');
+      const illumEl = document.getElementById('moon-illum-pct');
+      if (container) container.innerHTML = `<svg viewBox="0 0 16 16" class="w-3.5 h-3.5 overflow-visible">${svgContent}</svg>`;
+      if (nameEl) nameEl.textContent = phaseName;
+      if (illumEl) illumEl.textContent = `(${illum}%)`;
+    }
+
+    function applyLocationSolarTimes(tabName) {
+      const data = solarCache[tabName];
+      if (data) {
+        document.getElementById('sun-rise-val').textContent = data.rise;
+        document.getElementById('sun-set-val').textContent = data.set;
+      }
+    }
+
+    async function fetchSolarTimes() {
+      const locations = [
+        { key: 'barrington', lat: 41.724, lng: -71.290 },
+        { key: 'bocagrande', lat: 26.7562, lng: -82.2618 }
+      ];
+
+      await Promise.allSettled(locations.map(async (loc) => {
+        try {
+          const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${loc.lat}&lng=${loc.lng}&formatted=0`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.results) {
+              const rise = new Date(data.results.sunrise).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true });
+              const set = new Date(data.results.sunset).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true });
+              solarCache[loc.key] = { rise, set };
+              DashboardCache.saveSection(`solar_${loc.key}`, solarCache[loc.key]);
+            }
+          }
+        } catch (err) {
+          console.warn(`Solar fetch failed for ${loc.key}:`, err);
+        }
+      }));
+
+      applyLocationSolarTimes(activeTab);
+    }
+
+    function degToCompass(deg) {
+      if (deg === null || deg === undefined || isNaN(deg)) return 'VAR';
+      const val = Math.floor((deg / 22.5) + 0.5);
+      const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+      return arr[(val % 16)];
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true });
+      const clockEl = document.getElementById('current-clock');
+      if (clockEl) clockEl.textContent = `${timeStr} ET`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function formatNoaaDateTime(date) {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).formatToParts(date);
+      const m = {};
+      parts.forEach(p => m[p.type] = p.value);
+      return `${m.year}${m.month}${m.day} ${m.hour}:${m.minute}`;
+    }
+
+    function getTodayNoaaDateOnly() {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      const m = {};
+      parts.forEach(p => m[p.type] = p.value);
+      return `${m.year}${m.month}${m.day}`;
+    }
+
+    async function fetchJsonWithTimeout(url, timeoutMs = 5000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        if (res.status === 204) return { status: 204, data: null };
+        if (!res.ok) return { status: res.status, data: null };
+        const data = await res.json();
+        return { status: res.status, data };
+      } finally {
+        clearTimeout(id);
+      }
+    }
+
+    async function fetchWuObservation(stationId, customApiKey = '') {
+      const keysToTry = customApiKey ? [customApiKey, ...DEFAULT_WU_KEYS] : DEFAULT_WU_KEYS;
+      let lastStatus = null;
+
+      for (const apiKey of keysToTry) {
+        const targetUrl = `https://api.weather.com/v2/pws/observations/current?stationId=${encodeURIComponent(stationId)}&format=json&units=e&numericPrecision=decimal&apiKey=${encodeURIComponent(apiKey)}`;
+
+        // 1. Direct fetch
+        try {
+          const direct = await fetchJsonWithTimeout(targetUrl, 4500);
+          lastStatus = direct.status;
+          if (direct.data?.observations?.[0]) {
+            return { observation: direct.data.observations[0], status: 200 };
+          }
+          if (direct.status === 204) {
+            return { observation: null, status: 204 };
+          }
+        } catch (_) {}
+
+        // 2. CORS proxy fallback
+        const proxies = [
+          `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+        ];
+
+        for (const proxyUrl of proxies) {
+          try {
+            const proxied = await fetchJsonWithTimeout(proxyUrl, 5500);
+            if (proxied.data?.observations?.[0]) {
+              return { observation: proxied.data.observations[0], status: 200 };
+            }
+          } catch (_) {}
+        }
+      }
+
+      return { observation: null, status: lastStatus };
+    }
+
+    // =========================================================================
+    // 5. RENDERERS FOR BOTH TABS
+    // =========================================================================
+    function renderRiPws(model) {
+      if (!model) return;
+      document.getElementById('ri-pws-title').textContent = `Bourne Lane / ${model.stationId}`;
+      document.getElementById('ri-pws-temp').textContent = model.temp;
+      document.getElementById('ri-pws-feels').textContent = model.feelsLike;
+      document.getElementById('ri-pws-dew').textContent = model.dewpt;
+      document.getElementById('ri-pws-wind').textContent = model.windSpeed;
+      document.getElementById('ri-pws-gust').textContent = model.windGust;
+      document.getElementById('ri-pws-cardinal').textContent = model.windCardinal;
+      if (model.windDir !== null && model.windDir !== undefined) {
+        document.getElementById('ri-pws-arrow').style.transform = `rotate(${model.windDir}deg)`;
+      }
+      document.getElementById('ri-pws-baro').textContent = model.pressure;
+      document.getElementById('ri-pws-trend').textContent = model.trendText;
+      const srcEl = document.getElementById('ri-pws-source');
+      srcEl.textContent = model.sourceLabel;
+      srcEl.className = model.isFallback
+        ? 'font-bold text-amber-300 truncate max-w-[65px]'
+        : 'font-bold text-emerald-400 truncate max-w-[65px]';
+      document.getElementById('ri-pws-humidity').textContent = model.humidity;
+      document.getElementById('ri-pws-solar').textContent = model.solar;
+      document.getElementById('ri-pws-uv').textContent = model.uv;
+      document.getElementById('ri-pws-rain-rate').textContent = model.precipRate;
+      document.getElementById('ri-pws-daily-rain').textContent = model.precipTotal;
+
+      const pill = document.getElementById('ri-pws-status-pill');
+      pill.className = model.isFallback
+        ? "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono font-semibold"
+        : "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold";
+      document.getElementById('ri-pws-status-text').textContent = model.badgeText;
+    }
+
+    function renderBgPws(model) {
+      if (!model) return;
+      document.getElementById('bg-station-badge').textContent = model.stationId;
+      document.getElementById('bg-wu-external-link').href = `https://www.wunderground.com/dashboard/pws/${model.stationId}`;
+      document.getElementById('bg-pws-temp').textContent = model.temp;
+      document.getElementById('bg-pws-feels').textContent = model.feelsLike;
+      document.getElementById('bg-pws-dew').textContent = model.dewpt;
+      document.getElementById('bg-pws-wind').textContent = model.windSpeed;
+      document.getElementById('bg-pws-gust').textContent = model.windGust;
+      document.getElementById('bg-pws-cardinal').textContent = model.windCardinal;
+      if (model.windDir !== null && model.windDir !== undefined) {
+        document.getElementById('bg-pws-arrow').style.transform = `rotate(${model.windDir}deg)`;
+      }
+      document.getElementById('bg-pws-baro').textContent = model.pressure;
+      const trendEl = document.getElementById('bg-pws-trend');
+      trendEl.textContent = model.trendText;
+      trendEl.className = model.trendText === 'Falling'
+        ? 'font-bold text-amber-400'
+        : 'font-bold text-emerald-400';
+      document.getElementById('bg-pws-humidity').textContent = model.humidity;
+      document.getElementById('bg-pws-solar').textContent = model.solar;
+      document.getElementById('bg-pws-uv').textContent = model.uv;
+      document.getElementById('bg-pws-rain-rate').textContent = model.precipRate;
+      document.getElementById('bg-pws-daily-rain').textContent = model.precipTotal;
+
+      const pill = document.getElementById('bg-pws-status-pill');
+      const toneMap = {
+        live: "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono truncate",
+        warn: "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono truncate",
+        error: "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono truncate"
+      };
+      pill.className = toneMap[model.tone] || toneMap.live;
+      document.getElementById('bg-pws-status-text').textContent = model.badgeText;
+    }
+
+    function renderHourlyCards(periods, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container || !Array.isArray(periods) || periods.length === 0) return;
+
+      container.innerHTML = periods.slice(0, 12).map((p, idx) => {
+        const startTime = new Date(p.startTime);
+        const hourLabel = idx === 0
+          ? 'Now'
+          : startTime.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }).replace(' ', '');
+
+        const visuals = getWeatherVisuals(p.shortForecast, p.isDaytime);
+        const pop = p.probabilityOfPrecipitation?.value;
+        const popDisplay = (pop !== null && pop !== undefined && pop > 0) ? `${pop}%` : '0%';
+        const hasRain = pop && pop >= 20;
+        const windShort = (p.windSpeed || '').replace(' mph', '');
+
+        return `
+          <div class="min-w-[62px] lg:min-w-0 bg-marine-950/90 px-1.5 py-1.5 rounded-xl border border-marine-800/80 flex flex-col items-center justify-between text-center shrink-0 lg:shrink">
+            <span class="text-[9px] font-bold ${idx === 0 ? 'text-sky-400' : 'text-slate-300'} leading-none">
+              ${hourLabel}
+            </span>
+            <div class="my-0.5 flex items-center justify-center ${visuals.color}" title="${p.shortForecast}">
+              ${getWeatherSvg(visuals.icon, "w-6 h-6 sm:w-7 sm:h-7")}
+            </div>
+            <div class="text-xs sm:text-sm lg:text-base font-black text-white font-mono tracking-tight leading-none my-0.5">
+              ${p.temperature}°
+            </div>
+            <div class="flex items-center justify-center gap-0.5 text-[7px] leading-none">
+              <span class="inline-flex items-center gap-0.5 ${hasRain ? 'text-sky-400 font-bold' : 'text-slate-500'}">
+                <svg class="w-2 h-2 fill-current" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                ${popDisplay}
+              </span>
+              <span class="text-slate-600">&middot;</span>
+              <span class="text-slate-400">${windShort}m</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderDailyCards(periods, containerId, startMode = 'today') {
+      const container = document.getElementById(containerId);
+      if (!container || !Array.isArray(periods) || periods.length === 0) return;
+
+      const daysMap = new Map();
+      const now = new Date();
+      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now);
+
+      periods.forEach(p => {
+        const datePart = (p.startTime || '').slice(0, 10);
+        if (startMode === 'tomorrow' && datePart === todayStr) return;
+
+        let rawName = p.name || '';
+        if (!daysMap.has(datePart)) {
+          let cleanDay = rawName.replace(/ Tonight$/i, '').replace(/ Night$/i, '').trim();
+          if (startMode === 'today') {
+            if (datePart === todayStr || ['today', 'tonight', 'ton'].includes(cleanDay.toLowerCase())) {
+              cleanDay = 'Today';
+            }
+          } else if (cleanDay.toLowerCase() === 'tonight' || cleanDay.toLowerCase() === 'ton') {
+            cleanDay = 'Tomorrow';
+          }
+
+          daysMap.set(datePart, {
+            dateStr: datePart,
+            dayName: cleanDay,
+            high: null,
+            low: null,
+            shortForecast: p.shortForecast,
+            pop: p.probabilityOfPrecipitation?.value || 0
+          });
+        }
+
+        const entry = daysMap.get(datePart);
+        if (p.isDaytime) {
+          entry.high = p.temperature;
+          entry.shortForecast = p.shortForecast;
+          if (p.probabilityOfPrecipitation?.value) {
+            entry.pop = Math.max(entry.pop, p.probabilityOfPrecipitation.value);
+          }
+        } else {
+          entry.low = p.temperature;
+          if (!entry.high) entry.shortForecast = p.shortForecast;
+          if (p.probabilityOfPrecipitation?.value) {
+            entry.pop = Math.max(entry.pop, p.probabilityOfPrecipitation.value);
+          }
+        }
+      });
+
+      const dailyList = Array.from(daysMap.values()).slice(0, 7);
+
+      container.innerHTML = dailyList.map((d, idx) => {
+        const visuals = getWeatherVisuals(d.shortForecast, true);
+        const highVal = d.high !== null ? `${d.high}°` : '--°';
+        const lowVal = d.low !== null ? `${d.low}°` : '--°';
+        const firstLabel = startMode === 'today' ? 'Today' : 'Tomorrow';
+        const label = idx === 0 ? firstLabel : d.dayName.slice(0, 3);
+        const hasRain = d.pop && d.pop >= 20;
+
+        return `
+          <div class="bg-marine-950/90 p-1.5 rounded-xl border border-marine-800/80 flex flex-col items-center justify-between text-center">
+            <span class="text-[9px] font-bold ${idx === 0 ? 'text-indigo-300 font-extrabold' : 'text-slate-300'} leading-none uppercase">
+              ${label}
+            </span>
+
+            <div class="my-0.5 flex items-center justify-center ${visuals.color}" title="${d.shortForecast}">
+              ${getWeatherSvg(visuals.icon, "w-7 h-7 sm:w-8 sm:h-8")}
+            </div>
+
+            <div class="flex items-baseline justify-center gap-0.5 my-0.5 font-mono leading-none">
+              <span class="text-xs sm:text-sm font-black text-amber-300 tracking-tight">${highVal}</span>
+              <span class="text-[8px] font-bold text-slate-500">/</span>
+              <span class="text-xs sm:text-sm font-black text-sky-300 tracking-tight">${lowVal}</span>
+            </div>
+
+            <div class="flex items-center gap-0.5 text-[7px] ${hasRain ? 'text-sky-400 font-bold' : 'text-slate-500'} leading-none">
+              <svg class="w-2 h-2 fill-current" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+              <span>${d.pop || 0}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 6. TAB 1 FETCHERS: BARRINGTON, RI & CONIMICUT LIGHT (#8452944)
+    // =========================================================================
+    async function fetchBarringtonTelemetry() {
+      const cfg = getStationConfig();
+      const stationId = cfg.riStation;
+      const { observation } = await fetchWuObservation(stationId, cfg.customApiKey);
+
+      if (observation && observation.imperial) {
+        const imp = observation.imperial;
+        const temp = imp.temp !== null && imp.temp !== undefined ? Number(imp.temp).toFixed(1) : '--';
+        let feelsLike = imp.temp;
+        if (imp.temp >= 75 && imp.heatIndex !== null && imp.heatIndex !== undefined) {
+          feelsLike = imp.heatIndex;
+        } else if (imp.temp <= 55 && imp.windChill !== null && imp.windChill !== undefined) {
+          feelsLike = imp.windChill;
+        }
+        const dewpt = imp.dewpt !== null && imp.dewpt !== undefined ? `${Number(imp.dewpt).toFixed(0)}°` : '--°';
+        const windSpeed = imp.windSpeed !== null && imp.windSpeed !== undefined ? Number(imp.windSpeed).toFixed(1) : '0.0';
+        const windGust = imp.windGust !== null && imp.windGust !== undefined ? `${Number(imp.windGust).toFixed(1)}mph` : `${windSpeed}mph`;
+        const windDir = observation.winddir !== null && observation.winddir !== undefined ? Number(observation.winddir) : null;
+        const pressureNum = imp.pressure !== null && imp.pressure !== undefined ? Number(imp.pressure) : null;
+        const pressure = pressureNum !== null ? pressureNum.toFixed(2) : '--';
+        const humidity = observation.humidity !== null && observation.humidity !== undefined ? Math.round(Number(observation.humidity)) : '--';
+        const solar = observation.solarRadiation !== null && observation.solarRadiation !== undefined ? `${Math.round(Number(observation.solarRadiation))}W/m²` : '--';
+        const uv = observation.uv !== null && observation.uv !== undefined ? Number(observation.uv).toFixed(1) : '--';
+        const precipRate = imp.precipRate !== null && imp.precipRate !== undefined ? Number(imp.precipRate).toFixed(2) : '0.00';
+        const precipTotal = imp.precipTotal !== null && imp.precipTotal !== undefined ? Number(imp.precipTotal).toFixed(2) : '0.00';
+
+        let trendText = 'Steady';
+        if (pressureNum !== null && lastRiBaro !== null) {
+          const delta = pressureNum - lastRiBaro;
+          if (delta > 0.01) trendText = 'Rising';
+          else if (delta < -0.01) trendText = 'Falling';
+        }
+        if (pressureNum !== null) lastRiBaro = pressureNum;
+
+        let timeShort = '--:--';
+        if (observation.obsTimeLocal) {
+          const parts = observation.obsTimeLocal.split(' ');
+          if (parts[1]) timeShort = parts[1].slice(0, 5);
+        }
+
+        const model = {
+          stationId,
+          temp,
+          feelsLike: feelsLike !== null && feelsLike !== undefined ? `${Number(feelsLike).toFixed(0)}°` : '--°',
+          dewpt,
+          windSpeed,
+          windGust,
+          windDir,
+          windCardinal: degToCompass(windDir),
+          pressure,
+          trendText,
+          sourceLabel: 'WU Live',
+          humidity,
+          solar,
+          uv,
+          precipRate,
+          precipTotal,
+          badgeText: `LIVE • ${timeShort}`,
+          isFallback: false
+        };
+
+        renderRiPws(model);
+        DashboardCache.saveSection('ri_pws', model);
+        await computeNarragansettWaveState(parseFloat(windSpeed) || 0, windDir ?? 220);
+        return;
+      }
+
+      // Secondary Fallback: NWS Surface Observation from T.F. Green / Providence (KPVD)
+      try {
+        const nwsRes = await fetch('https://api.weather.gov/stations/KPVD/observations/latest');
+        if (nwsRes.ok) {
+          const nwsData = await nwsRes.json();
+          const props = nwsData.properties;
+          if (props) {
+            const tempC = props.temperature?.value;
+            const tempF = tempC !== null && tempC !== undefined ? ((tempC * 9 / 5) + 32).toFixed(1) : '--';
+            const dewC = props.dewpoint?.value;
+            const dewF = dewC !== null && dewC !== undefined ? `${((dewC * 9 / 5) + 32).toFixed(0)}°` : '--°';
+            const windKmh = props.windSpeed?.value;
+            const windMph = windKmh !== null && windKmh !== undefined ? (windKmh * 0.621371).toFixed(1) : '0.0';
+            const gustKmh = props.windGust?.value;
+            const gustMph = gustKmh !== null && gustKmh !== undefined ? `${(gustKmh * 0.621371).toFixed(1)}mph` : `${windMph}mph`;
+            const windDir = props.windDirection?.value ?? null;
+            const baroPa = props.barometricPressure?.value;
+            const baroInHg = baroPa !== null && baroPa !== undefined ? (baroPa * 0.0002953).toFixed(2) : '--';
+            const rh = props.relativeHumidity?.value !== null && props.relativeHumidity?.value !== undefined ? Math.round(props.relativeHumidity.value) : '--';
+            const precipMm = props.precipitationLastHour?.value;
+            const precipIn = precipMm !== null && precipMm !== undefined ? (precipMm / 25.4).toFixed(2) : '0.00';
+
+            let obsTimeStr = '--:--';
+            if (props.timestamp) {
+              obsTimeStr = new Date(props.timestamp).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+
+            const fallbackModel = {
+              stationId,
+              temp: tempF,
+              feelsLike: tempF !== '--' ? `${Math.round(parseFloat(tempF))}°` : '--°',
+              dewpt: dewF,
+              windSpeed: windMph,
+              windGust: gustMph,
+              windDir,
+              windCardinal: degToCompass(windDir),
+              pressure: baroInHg,
+              trendText: 'NWS KPVD',
+              sourceLabel: 'NWS KPVD',
+              humidity: rh,
+              solar: 'N/A',
+              uv: 'N/A',
+              precipRate: precipIn,
+              precipTotal: precipIn,
+              badgeText: `KPVD • ${obsTimeStr}`,
+              isFallback: true
+            };
+
+            renderRiPws(fallbackModel);
+            DashboardCache.saveSection('ri_pws', fallbackModel);
+            await computeNarragansettWaveState(parseFloat(windMph) || 0, windDir ?? 220);
+          }
+        }
+      } catch (err) {
+        console.warn('KPVD fallback error:', err);
+      }
+    }
+
+    async function fetchBarringtonForecasts() {
+      try {
+        const pointRes = await fetch('https://api.weather.gov/points/41.7412,-71.3092');
+        if (pointRes.ok) {
+          const pointData = await pointRes.json();
+
+          fetch(pointData.properties.forecastHourly)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              const periods = data?.properties?.periods || [];
+              if (periods.length > 0) {
+                renderHourlyCards(periods, 'ri-hourly-container');
+                DashboardCache.saveSection('ri_hourly', periods);
+              }
+            }).catch(() => {});
+
+          fetch(pointData.properties.forecast)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              const periods = data?.properties?.periods || [];
+              if (periods.length > 0) {
+                renderDailyCards(periods, 'ri-daily-container', 'today');
+                DashboardCache.saveSection('ri_daily', periods);
+              }
+            }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Barrington NWS error:', err);
+      }
+    }
+
+    function renderConimicutTides(bundle) {
+      if (!bundle) return;
+      const { observedData = [], predictions = [], waterTemp = null } = bundle;
+
+      if (waterTemp !== null) {
+        document.getElementById('ri-bay-water-temp').textContent = waterTemp.toFixed(1);
+      }
+
+      observedData.sort((a, b) => new Date(a.t.replace(' ', 'T')) - new Date(b.t.replace(' ', 'T')));
+      predictions.sort((a, b) => new Date(a.t.replace(' ', 'T')) - new Date(b.t.replace(' ', 'T')));
+
+      if (observedData.length > 0) {
+        const latest = observedData[observedData.length - 1];
+        document.getElementById('ri-tide-latest-val').textContent = parseFloat(latest.v).toFixed(2);
+
+        if (observedData.length >= 6) {
+          const prior = parseFloat(observedData[observedData.length - 6].v);
+          const diff = parseFloat(latest.v) - prior;
+          const stateEl = document.getElementById('ri-tide-state-val');
+
+          if (diff > 0.04) {
+            stateEl.innerHTML = `<span class="text-emerald-400 font-bold flex items-center gap-0.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Flooding (+${diff.toFixed(2)}ft)</span>`;
+          } else if (diff < -0.04) {
+            stateEl.innerHTML = `<span class="text-sky-400 font-bold flex items-center gap-0.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> Ebbing (${diff.toFixed(2)}ft)</span>`;
+          } else {
+            stateEl.innerHTML = `<span class="text-slate-300 font-bold">Slack Water</span>`;
+          }
+        }
+      }
+
+      if (predictions.length > 0) {
+        const refTime = observedData.length > 0
+          ? new Date(observedData[observedData.length - 1].t.replace(' ', 'T')).getTime()
+          : Date.now();
+
+        let nextExtremum = null;
+        for (let i = 1; i < predictions.length - 1; i++) {
+          const pTime = new Date(predictions[i].t.replace(' ', 'T')).getTime();
+          if (pTime >= refTime) {
+            const pPrev = parseFloat(predictions[i - 1].v);
+            const pCurr = parseFloat(predictions[i].v);
+            const pNext = parseFloat(predictions[i + 1].v);
+            if (pCurr > pPrev && pCurr > pNext) {
+              nextExtremum = { type: 'High', time: predictions[i].t, value: pCurr };
+              break;
+            } else if (pCurr < pPrev && pCurr < pNext) {
+              nextExtremum = { type: 'Low', time: predictions[i].t, value: pCurr };
+              break;
+            }
+          }
+        }
+
+        if (nextExtremum) {
+          const extTime = nextExtremum.time.split(' ')[1] || nextExtremum.time;
+          document.getElementById('ri-tide-next-event').textContent = `${nextExtremum.type} @ ${extTime} (${nextExtremum.value.toFixed(1)}ft)`;
+        }
+      }
+
+      const canvas = document.getElementById('tideChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const chartLabels = [];
+      const predSeries = [];
+      const obsSeries = [];
+
+      predictions.forEach((p) => {
+        const parts = p.t.split(' ');
+        chartLabels.push(parts[1] || p.t);
+        predSeries.push(parseFloat(p.v));
+
+        const pTimestamp = new Date(p.t.replace(' ', 'T')).getTime();
+        let matchedVal = null;
+        for (let o of observedData) {
+          const oTimestamp = new Date(o.t.replace(' ', 'T')).getTime();
+          if (Math.abs(pTimestamp - oTimestamp) <= 10 * 60 * 1000) {
+            matchedVal = parseFloat(o.v);
+            break;
+          }
+        }
+        obsSeries.push(matchedVal);
+      });
+
+      if (tideChartInstance) {
+        tideChartInstance.destroy();
+      }
+
+      const predGradient = ctx.createLinearGradient(0, 0, 0, 260);
+      predGradient.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+      predGradient.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+      tideChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartLabels,
+          datasets: [
+            {
+              label: 'Predicted',
+              data: predSeries,
+              borderColor: '#38bdf8',
+              backgroundColor: predGradient,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHitRadius: 24,
+              fill: true,
+              tension: 0.35
+            },
+            {
+              label: 'Observed',
+              data: obsSeries,
+              borderColor: '#10b981',
+              backgroundColor: '#10b981',
+              borderWidth: 2.5,
+              pointRadius: 1,
+              pointHitRadius: 24,
+              pointHoverRadius: 5,
+              spanGaps: true,
+              tension: 0.25
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#081224',
+              titleColor: '#e2e8f0',
+              bodyColor: '#38bdf8',
+              borderColor: '#12254a',
+              borderWidth: 1,
+              padding: 8,
+              bodyFont: { size: 10 },
+              titleFont: { size: 10 },
+              callbacks: {
+                label: (c) => `${c.dataset.label}: ${c.parsed.y !== null ? c.parsed.y.toFixed(2) + ' ft' : 'No Reading'}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              reverse: false,
+              grid: { color: 'rgba(18, 37, 74, 0.45)' },
+              ticks: { color: '#64748b', maxTicksLimit: 9, font: { size: 8 } }
+            },
+            y: {
+              grid: { color: 'rgba(18, 37, 74, 0.55)' },
+              ticks: { color: '#94a3b8', callback: (val) => `${val}'`, font: { size: 8 } },
+              suggestedMin: -1,
+              suggestedMax: 6
+            }
+          }
+        }
+      });
+    }
+
+    async function fetchConimicutTideData() {
+      const chartLoader = document.getElementById('chart-loader');
+      if (chartLoader) chartLoader.style.opacity = '1';
+
+      try {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+        const future12h = new Date(now.getTime() + (12 * 60 * 60 * 1000));
+        const beginDateStr = formatNoaaDateTime(past24h);
+        const endDateStr = formatNoaaDateTime(future12h);
+        const baseUrl = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
+
+        const [obsRes, predRes, tempRes] = await Promise.all([
+          fetch(`${baseUrl}?station=8452944&product=water_level&datum=MLLW&time_zone=lst_ldt&units=english&format=json&application=MarinePWAHub&range=24`).then(r => r.json()).catch(() => ({ data: [] })),
+          fetch(`${baseUrl}?station=8452944&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json&application=MarinePWAHub&begin_date=${beginDateStr}&end_date=${endDateStr}`).then(r => r.json()).catch(() => ({ predictions: [] })),
+          fetch(`${baseUrl}?station=8452944&product=water_temperature&datum=MLLW&time_zone=lst_ldt&units=english&format=json&application=MarinePWAHub&range=6`).then(r => r.json()).catch(() => ({ data: [] }))
+        ]);
+
+        let observedData = obsRes.data || [];
+        let predictions = predRes.predictions || [];
+        let waterTemp = null;
+
+        if (tempRes.data && tempRes.data.length > 0) {
+          const validTemps = tempRes.data.filter(d => d.v !== '' && !isNaN(parseFloat(d.v)));
+          if (validTemps.length > 0) waterTemp = parseFloat(validTemps[validTemps.length - 1].v);
+        }
+
+        if (!predictions || predictions.length === 0) {
+          const fb = await fetch(`${baseUrl}?station=8452944&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json&application=MarinePWAHub&range=36`).then(r => r.json()).catch(() => ({ predictions: [] }));
+          predictions = fb.predictions || [];
+        }
+
+        const bundle = { observedData, predictions, waterTemp };
+        renderConimicutTides(bundle);
+        DashboardCache.saveSection('ri_tides', bundle);
+      } catch (err) {
+        console.warn('Conimicut NOAA tide error:', err);
+      } finally {
+        if (chartLoader) chartLoader.style.opacity = '0';
+      }
+    }
+
+    function renderNarragansettWaves(waveModel) {
+      if (!waveModel) return;
+      document.getElementById('ri-bay-wave-height').textContent = waveModel.displayWaveStr;
+      const statusEl = document.getElementById('ri-bay-wave-status');
+      statusEl.textContent = waveModel.statusStr;
+      statusEl.className = `text-[10px] font-black ${waveModel.statusColor} mt-0.5 truncate`;
+      const adv = document.getElementById('ri-bay-advisory-badge');
+      adv.textContent = waveModel.advisoryText;
+      adv.className = waveModel.isAdvisoryAlert
+        ? "px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        : "px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    }
+
+    async function computeNarragansettWaveState(currentWindMph = 10, windDirectionDeg = 220) {
+      let marineForecastWaves = null;
+      let marineAdvisory = null;
+
+      try {
+        const res = await fetch('https://api.weather.gov/zones/marine/ANZ236/forecast');
+        if (res.ok) {
+          const data = await res.json();
+          const periods = data?.properties?.periods || [];
+          if (periods.length > 0) {
+            const text = (periods[0].detailedForecast || periods[0].shortForecast || '').toLowerCase();
+            const waveMatch = text.match(/waves?\s+(\d+)\s+to\s+(\d+)\s+f(ee)?t/i) || text.match(/waves?\s+around\s+(\d+)\s+f(ee)?t/i);
+            if (waveMatch) marineForecastWaves = waveMatch[2] ? `${waveMatch[1]} - ${waveMatch[2]}` : `${waveMatch[1]}`;
+            if (text.includes('gale')) marineAdvisory = 'Gale Warning';
+            else if (text.includes('small craft')) marineAdvisory = 'Small Craft Advisory';
+          }
+        }
+      } catch (_) {}
+
+      const windKt = currentWindMph * 0.868976;
+      const effectiveFetchNm = (windDirectionDeg >= 150 && windDirectionDeg <= 210) ? 7.0 : ((windDirectionDeg >= 330 || windDirectionDeg <= 30) ? 3.0 : 2.0);
+      const estimatedSigHeightFt = Math.max(0.3, (0.0163 * Math.pow(windKt, 1.2) * Math.pow(effectiveFetchNm, 0.4)));
+      const displayWaveStr = marineForecastWaves || `${Math.max(0.4, (estimatedSigHeightFt - 0.3)).toFixed(1)} - ${(estimatedSigHeightFt + 0.4).toFixed(1)}`;
+
+      let statusStr = "Light Chop (1-2 ft)";
+      let statusColor = "text-sky-300";
+      if (estimatedSigHeightFt < 0.8) { statusStr = "Calm (<1 ft)"; statusColor = "text-teal-300"; }
+      else if (estimatedSigHeightFt < 1.8) { statusStr = "Light Chop (1-2 ft)"; statusColor = "text-sky-300"; }
+      else if (estimatedSigHeightFt < 2.8) { statusStr = "Moderate Chop (2-3 ft)"; statusColor = "text-amber-300"; }
+      else { statusStr = "Rough (3+ ft)"; statusColor = "text-rose-400"; }
+
+      const model = {
+        displayWaveStr,
+        statusStr,
+        statusColor,
+        advisoryText: marineAdvisory || (estimatedSigHeightFt >= 2.5 ? 'Choppy Seas' : 'Normal Seas'),
+        isAdvisoryAlert: Boolean(marineAdvisory || estimatedSigHeightFt >= 2.5)
+      };
+
+      renderNarragansettWaves(model);
+      DashboardCache.saveSection('ri_waves', model);
+    }
+
+    // =========================================================================
+    // 7. TAB 2 FETCHERS: BOCA GRANDE, FL & PINE ISLAND SOUND (#8725528)
+    // =========================================================================
+    async function fetchBocaGrandeTelemetry() {
+      const cfg = getStationConfig();
+      const stationId = cfg.bgStation;
+      const { observation, status } = await fetchWuObservation(stationId, cfg.customApiKey);
+
+      if (!observation) {
+        const badgeText = status === 204 ? 'Station >60m Stale' : 'Feed Blocked / Check Key';
+        document.getElementById('bg-pws-status-text').textContent = badgeText;
+        const pill = document.getElementById('bg-pws-status-pill');
+        pill.className = status === 204
+          ? "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono truncate"
+          : "inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono truncate";
+        await computeBocaWaveState(10, 80);
+        return;
+      }
+
+      const imp = observation.imperial || {};
+      const temp = imp.temp;
+      const feelsLike = (temp !== null && temp !== undefined)
+        ? (temp >= 70 ? (imp.heatIndex ?? temp) : (imp.windChill ?? temp))
+        : null;
+      const dewpoint = imp.dewpt;
+      const windSpeed = imp.windSpeed;
+      const windGust = imp.windGust;
+      const windDir = observation.winddir;
+      const humidity = observation.humidity;
+      const pressure = imp.pressure;
+      const solar = observation.solarRadiation;
+      const uv = observation.uv;
+      const rainRate = imp.precipRate ?? 0;
+      const dailyRain = imp.precipTotal ?? 0;
+
+      let trendText = 'Steady';
+      if (pressure !== null && pressure !== undefined) {
+        const pVal = Number(pressure);
+        if (lastBgBaro !== null) {
+          const diff = pVal - lastBgBaro;
+          if (diff > 0.01) trendText = 'Rising';
+          else if (diff < -0.01) trendText = 'Falling';
+        }
+        lastBgBaro = pVal;
+      }
+
+      let obsLabel = 'Live';
+      if (observation.obsTimeLocal) {
+        const timePart = observation.obsTimeLocal.split(' ')[1] || '';
+        const [hh, mm] = timePart.split(':');
+        if (hh && mm) {
+          const hNum = parseInt(hh, 10);
+          obsLabel = `Updated ${(hNum % 12) || 12}:${mm}${hNum >= 12 ? 'p' : 'a'}`;
+        }
+      }
+
+      const model = {
+        stationId,
+        temp: (temp !== null && temp !== undefined) ? Number(temp).toFixed(1) : '--',
+        feelsLike: (feelsLike !== null && feelsLike !== undefined) ? `${Math.round(feelsLike)}°` : '--°',
+        dewpt: (dewpoint !== null && dewpoint !== undefined) ? `${Number(dewpoint).toFixed(1)}°` : '--°',
+        windSpeed: (windSpeed !== null && windSpeed !== undefined) ? Number(windSpeed).toFixed(1) : '--',
+        windGust: (windGust !== null && windGust !== undefined) ? `${Number(windGust).toFixed(1)}mph` : '--',
+        windDir,
+        windCardinal: degToCompass(windDir),
+        pressure: (pressure !== null && pressure !== undefined) ? Number(pressure).toFixed(2) : '--',
+        trendText,
+        humidity: (humidity !== null && humidity !== undefined) ? Math.round(humidity) : '--',
+        solar: (solar !== null && solar !== undefined) ? `${Math.round(solar)}W` : 'N/A',
+        uv: (uv !== null && uv !== undefined) ? Number(uv).toFixed(1) : 'N/A',
+        precipRate: Number(rainRate).toFixed(2),
+        precipTotal: Number(dailyRain).toFixed(2),
+        badgeText: obsLabel,
+        tone: 'live'
+      };
+
+      renderBgPws(model);
+      DashboardCache.saveSection('bg_pws', model);
+
+      await computeBocaWaveState(
+        windSpeed !== null && windSpeed !== undefined ? Number(windSpeed) : 10,
+        windDir !== null && windDir !== undefined ? Number(windDir) : 80
+      );
+    }
+
+    async function fetchBocaGrandeForecasts() {
+      try {
+        const pointRes = await fetch('https://api.weather.gov/points/26.7562,-82.2618');
+        if (pointRes.ok) {
+          const pointData = await pointRes.json();
+
+          fetch(pointData.properties.forecastHourly)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              const periods = data?.properties?.periods || [];
+              if (periods.length > 0) {
+                renderHourlyCards(periods, 'bg-hourly-container');
+                DashboardCache.saveSection('bg_hourly', periods);
+              }
+            }).catch(() => {});
+
+          fetch(pointData.properties.forecast)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              const periods = data?.properties?.periods || [];
+              if (periods.length > 0) {
+                renderDailyCards(periods, 'bg-daily-container', 'tomorrow');
+                DashboardCache.saveSection('bg_daily', periods);
+              }
+            }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Boca Grande NWS error:', err);
+      }
+    }
+
+    function renderPineIslandTides(bundle) {
+      if (!bundle) return;
+      const { predictions = [], waterTemp = null, dateDisplay = '--' } = bundle;
+
+      const tableBody = document.getElementById('bg-tide-table-body');
+      const tableDateEl = document.getElementById('bg-tide-table-date');
+      const nextEventEl = document.getElementById('bg-tide-next-event');
+      const stateEl = document.getElementById('bg-tide-state-val');
+
+      if (tableDateEl) tableDateEl.textContent = dateDisplay;
+      if (waterTemp !== null) {
+        document.getElementById('bg-bay-water-temp').textContent = Number(waterTemp).toFixed(1);
+      }
+
+      if (!predictions || predictions.length === 0) return;
+
+      const currentTime = Date.now();
+      let nextTideFound = null;
+
+      tableBody.innerHTML = predictions.map(p => {
+        const eventTime = new Date(p.t.replace(' ', 'T')).getTime();
+        const isPast = eventTime < currentTime;
+        const isHigh = (p.type === 'H');
+        if (!nextTideFound && !isPast) nextTideFound = p;
+
+        const rawTimeParts = p.t.split(' ')[1] || p.t;
+        const [h, m] = rawTimeParts.split(':');
+        const hourNum = parseInt(h, 10);
+        const timeFormatted = `${(hourNum % 12) || 12}:${m} ${hourNum >= 12 ? 'PM' : 'AM'}`;
+
+        const typeBadge = isHigh
+          ? `<span class="inline-flex items-center gap-1 text-emerald-400 font-bold"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> High</span>`
+          : `<span class="inline-flex items-center gap-1 text-sky-400 font-bold"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> Low</span>`;
+
+        const statusBadge = isPast
+          ? `<span class="text-[9px] text-slate-500 font-sans">Passed</span>`
+          : `<span class="text-[9px] text-amber-300 font-semibold font-sans animate-pulse">Upcoming</span>`;
+
+        return `
+          <tr class="hover:bg-marine-900/60 transition ${isPast ? 'opacity-60' : 'bg-marine-900/30'}">
+            <td class="py-1.5 px-2 text-xs">${typeBadge}</td>
+            <td class="py-1.5 px-2 text-slate-200 text-xs">${timeFormatted}</td>
+            <td class="py-1.5 px-2 text-right font-bold text-slate-100 text-xs">${parseFloat(p.v).toFixed(2)} ft</td>
+            <td class="py-1.5 px-2 text-right">${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+
+      if (nextTideFound) {
+        const rawTime = nextTideFound.t.split(' ')[1] || nextTideFound.t;
+        const [h, m] = rawTime.split(':');
+        const hourNum = parseInt(h, 10);
+        const timeFormatted = `${(hourNum % 12) || 12}:${m} ${hourNum >= 12 ? 'PM' : 'AM'}`;
+        const typeName = nextTideFound.type === 'H' ? 'High' : 'Low';
+        nextEventEl.textContent = `${typeName} @ ${timeFormatted} (${parseFloat(nextTideFound.v).toFixed(1)}ft)`;
+
+        if (nextTideFound.type === 'H') {
+          stateEl.innerHTML = `<span class="text-emerald-400 font-bold flex items-center gap-1"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg> Flooding (Rising)</span>`;
+        } else {
+          stateEl.innerHTML = `<span class="text-sky-400 font-bold flex items-center gap-1"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/></svg> Ebbing (Falling)</span>`;
+        }
+      } else {
+        nextEventEl.textContent = "Check Tomorrow";
+        stateEl.innerHTML = `<span class="text-slate-300 font-bold">End of Tidal Cycle</span>`;
+      }
+    }
+
+    async function fetchPineIslandTideData() {
+      const now = new Date();
+      const dateDisplay = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' });
+      const dateStr = getTodayNoaaDateOnly();
+      const baseUrl = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
+
+      try {
+        const [predRes, tempRes] = await Promise.all([
+          fetch(`${baseUrl}?station=8725528&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=english&format=json&application=MarinePWAHub&begin_date=${dateStr}&end_date=${dateStr}`).then(r => r.json()).catch(() => ({ predictions: [] })),
+          fetch(`${baseUrl}?station=8725528&product=water_temperature&datum=MLLW&time_zone=lst_ldt&units=english&format=json&application=MarinePWAHub&range=3`).then(r => r.json()).catch(() => ({ data: [] }))
+        ]);
+
+        const predictions = predRes.predictions || [];
+        let waterTemp = null;
+        if (tempRes.data && tempRes.data.length > 0) {
+          const validTemps = tempRes.data.filter(d => d.v !== '' && !isNaN(parseFloat(d.v)));
+          if (validTemps.length > 0) waterTemp = parseFloat(validTemps[validTemps.length - 1].v);
+        }
+
+        if (predictions.length > 0) {
+          const bundle = { predictions, waterTemp, dateDisplay };
+          renderPineIslandTides(bundle);
+          DashboardCache.saveSection('bg_tides', bundle);
+        }
+      } catch (err) {
+        console.warn('Pine Island NOAA error:', err);
+      }
+    }
+
+    function renderBocaWaves(waveModel) {
+      if (!waveModel) return;
+      document.getElementById('bg-bay-wave-height').textContent = waveModel.displayWaveStr;
+      const statusEl = document.getElementById('bg-bay-wave-status');
+      statusEl.textContent = waveModel.statusStr;
+      statusEl.className = `text-[10px] font-black ${waveModel.statusColor} mt-0.5 truncate`;
+      const adv = document.getElementById('bg-bay-advisory-badge');
+      adv.textContent = waveModel.advisoryText;
+      adv.className = waveModel.isAdvisoryAlert
+        ? "px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        : "px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    }
+
+    async function computeBocaWaveState(currentWindMph = 10, windDirectionDeg = 80) {
+      let marineForecastWaves = null;
+      let marineAdvisory = null;
+
+      try {
+        const res = await fetch('https://api.weather.gov/zones/marine/GMZ836/forecast');
+        if (res.ok) {
+          const data = await res.json();
+          const periods = data?.properties?.periods || [];
+          if (periods.length > 0) {
+            const text = (periods[0].detailedForecast || periods[0].shortForecast || '').toLowerCase();
+            const waveMatch = text.match(/waves?\s+(\d+)\s+to\s+(\d+)\s+f(ee)?t/i) || text.match(/waves?\s+around\s+(\d+)\s+f(ee)?t/i);
+            if (waveMatch) marineForecastWaves = waveMatch[2] ? `${waveMatch[1]} - ${waveMatch[2]}` : `${waveMatch[1]}`;
+            if (text.includes('gale')) marineAdvisory = 'Gale Warning';
+            else if (text.includes('small craft')) marineAdvisory = 'Small Craft Advisory';
+          }
+        }
+      } catch (_) {}
+
+      const windKt = currentWindMph * 0.868976;
+      const effectiveFetchNm = (windDirectionDeg >= 240 && windDirectionDeg <= 300) ? 8.0 : ((windDirectionDeg >= 340 || windDirectionDeg <= 40) ? 5.0 : 3.0);
+      const estimatedSigHeightFt = Math.max(0.4, (0.0163 * Math.pow(windKt, 1.2) * Math.pow(effectiveFetchNm, 0.4)));
+      const displayWaveStr = marineForecastWaves || `${Math.max(0.5, (estimatedSigHeightFt - 0.3)).toFixed(1)} - ${(estimatedSigHeightFt + 0.3).toFixed(1)}`;
+
+      let statusStr = "Light Chop (1-2 ft)";
+      let statusColor = "text-sky-300";
+      if (estimatedSigHeightFt < 0.8) { statusStr = "Calm (<1 ft)"; statusColor = "text-teal-300"; }
+      else if (estimatedSigHeightFt < 1.8) { statusStr = "Light Chop (1-2 ft)"; statusColor = "text-sky-300"; }
+      else if (estimatedSigHeightFt < 2.8) { statusStr = "Moderate Chop (2-3 ft)"; statusColor = "text-amber-300"; }
+      else { statusStr = "Rough (3+ ft)"; statusColor = "text-rose-400"; }
+
+      const model = {
+        displayWaveStr,
+        statusStr,
+        statusColor,
+        advisoryText: marineAdvisory || (estimatedSigHeightFt >= 2.5 ? 'Choppy Sound' : 'Normal Seas'),
+        isAdvisoryAlert: Boolean(marineAdvisory || estimatedSigHeightFt >= 2.5)
+      };
+
+      renderBocaWaves(model);
+      DashboardCache.saveSection('bg_waves', model);
+    }
+
+    // =========================================================================
+    // 8. HYDRATION, MASTER ORCHESTRATOR & AUTO-REFRESH ON WAKE
+    // =========================================================================
+    function hydrateFromCache() {
+      const cached = DashboardCache.load();
+      if (!cached || !cached.sections) return false;
+      const s = cached.sections;
+
+      if (s.solar_barrington?.data) solarCache.barrington = s.solar_barrington.data;
+      if (s.solar_bocagrande?.data) solarCache.bocagrande = s.solar_bocagrande.data;
+      applyLocationSolarTimes(activeTab);
+
+      // Tab 1: Barrington
+      if (s.ri_pws?.data) renderRiPws(s.ri_pws.data);
+      if (s.ri_hourly?.data) renderHourlyCards(s.ri_hourly.data, 'ri-hourly-container');
+      if (s.ri_daily?.data) renderDailyCards(s.ri_daily.data, 'ri-daily-container', 'today');
+      if (s.ri_tides?.data) renderConimicutTides(s.ri_tides.data);
+      if (s.ri_waves?.data) renderNarragansettWaves(s.ri_waves.data);
+
+      // Tab 2: Boca Grande
+      if (s.bg_pws?.data) renderBgPws(s.bg_pws.data);
+      if (s.bg_hourly?.data) renderHourlyCards(s.bg_hourly.data, 'bg-hourly-container');
+      if (s.bg_daily?.data) renderDailyCards(s.bg_daily.data, 'bg-daily-container', 'tomorrow');
+      if (s.bg_tides?.data) renderPineIslandTides(s.bg_tides.data);
+      if (s.bg_waves?.data) renderBocaWaves(s.bg_waves.data);
+
+      updateCacheStatusUI('cached');
+      return true;
+    }
+
+    async function fetchAllData(force = false) {
+      if (isFetchingNow && !force) return;
+      isFetchingNow = true;
+
+      const refreshIcon = document.getElementById('refresh-icon');
+      if (refreshIcon) refreshIcon.classList.add('animate-spin');
+      updateCacheStatusUI('syncing');
+
+      updateMoonPhase();
+
+      await Promise.allSettled([
+        fetchSolarTimes(),
+        fetchBarringtonTelemetry(),
+        fetchBarringtonForecasts(),
+        fetchConimicutTideData(),
+        fetchBocaGrandeTelemetry(),
+        fetchBocaGrandeForecasts(),
+        fetchPineIslandTideData()
+      ]);
+
+      isFetchingNow = false;
+      updateCacheStatusUI('live');
+
+      if (refreshIcon) {
+        setTimeout(() => refreshIcon.classList.remove('animate-spin'), 450);
+      }
+    }
+
+    // Auto-refresh on iOS / Mobile Safari Wake
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        updateClock();
+        updateMoonPhase();
+        if (DashboardCache.getAgeMs() >= WAKE_STALE_THRESHOLD_MS) {
+          fetchAllData();
+        }
+      }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted || DashboardCache.getAgeMs() >= WAKE_STALE_THRESHOLD_MS) {
+        fetchAllData();
+      }
+    });
+
+    // Periodic 5-minute refresh while visible
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAllData();
+      }
+    }, PERIODIC_REFRESH_MS);
+
+    // Boot Sequence
+    window.addEventListener('DOMContentLoaded', () => {
+      switchTab(activeTab);
+      updateMoonPhase();
+      hydrateFromCache();
+      fetchAllData();
+    });
+  </script>
+</body>
+</html>
